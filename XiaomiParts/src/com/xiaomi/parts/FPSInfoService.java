@@ -25,7 +25,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
-import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.os.Handler;
 import android.os.IBinder;
@@ -65,7 +64,7 @@ public class FPSInfoService extends Service {
         private Paint mOnlinePaint;
         private float mAscent;
         private int mFH;
-        private int mMaxWidth;
+        private int mMaxWidth = 0;
 
         private int mNeededWidth;
         private int mNeededHeight;
@@ -74,29 +73,25 @@ public class FPSInfoService extends Service {
 
         private Handler mCurFPSHandler = new Handler() {
             public void handleMessage(Message msg) {
-                if(msg.obj==null){
+                if(msg.obj == null || msg.what != 1) {
                     return;
                 }
-                if(msg.what==1){
-                    String msgData = (String) msg.obj;
-                    msgData = msgData.substring(0, Math.min(msgData.length(), 9));
-                    mFps = msgData;
-                    mDataAvail = true;
-                    updateDisplay();
-                }
+                mFps = parseMeasuredFps((String) msg.obj);
+                mDataAvail = true;
+                updateDisplay();
             }
         };
 
         FPSView(Context c) {
             super(c);
             float density = c.getResources().getDisplayMetrics().density;
-            int paddingPx = Math.round(5 * density);
+            int paddingPx = Math.round(9 * density);
             setPadding(paddingPx, paddingPx, paddingPx, paddingPx);
-            setBackgroundColor(Color.argb(0x60, 0, 0, 0));
+            setBackgroundColor(Color.argb(0x0, 0, 0, 0));
 
-            final int textSize = Math.round(12 * density);
+            final int textSize = Math.round(15 * density);
 
-            Typeface typeface = Typeface.create("monospace", Typeface.NORMAL);
+            Typeface typeface = Typeface.create("googlesans", Typeface.BOLD);
 
             mOnlinePaint = new Paint();
             mOnlinePaint.setTypeface(typeface);
@@ -109,7 +104,7 @@ public class FPSInfoService extends Service {
             float descent = mOnlinePaint.descent();
             mFH = (int)(descent - mAscent + .5f);
 
-            final String maxWidthStr="fps: 60.1";
+            final String maxWidthStr = "FPS: XYZ";
             mMaxWidth = (int)mOnlinePaint.measureText(maxWidthStr);
 
             updateDisplay();
@@ -144,23 +139,38 @@ public class FPSInfoService extends Service {
             }
 
             final int W = mNeededWidth;
-            final int LEFT = getWidth()-1;
+            final int RIGHT = getWidth()-1;
 
-            int x = LEFT - mPaddingLeft;
+            int x = RIGHT - mPaddingLeft;
             int top = mPaddingTop + 2;
             int bottom = mPaddingTop + mFH - 2;
 
             int y = mPaddingTop - (int)mAscent;
 
             String s=getFPSInfoString();
-            canvas.drawText(s, LEFT-mPaddingLeft-mMaxWidth,
+            canvas.drawText(s, RIGHT-mPaddingLeft-mMaxWidth,
                     y-1, mOnlinePaint);
             y += mFH;
+        }
+
+        private String parseMeasuredFps(String data) {
+            String result = "err";
+            try {
+                float fps = Float.parseFloat(data.trim().split("\\s+")[1]);
+                result = String.valueOf(Math.round(fps));
+            } catch (NumberFormatException e) {
+                Log.e(TAG, "NumberFormatException occured at parsing FPS data");
+            }
+            return "FPS: " + result;
         }
 
         void updateDisplay() {
             if (!mDataAvail) {
                 return;
+            }
+
+            if (mOnlinePaint != null) {
+                mMaxWidth = (int) mOnlinePaint.measureText(mFps);
             }
 
             int neededWidth = mPaddingLeft + mPaddingRight + mMaxWidth;
@@ -218,7 +228,8 @@ public class FPSInfoService extends Service {
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE|
             WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
             PixelFormat.TRANSLUCENT);
-        params.gravity = Gravity.LEFT | Gravity.TOP;
+        params.y = 50;
+        params.gravity = Gravity.RIGHT | Gravity.TOP;
         params.setTitle("FPS Info");
 
         startThread();
