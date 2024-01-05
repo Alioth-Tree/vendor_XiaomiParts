@@ -40,6 +40,17 @@
         android:persistent="true" />
     </PreferenceCategory>
 
+    <Preference
+            android:key="per_refresh_rate_settings"
+            android:summary="@string/refresh_summary"
+            android:icon="@drawable/ic_refresh_default"
+            android:title="@string/refresh_title">
+            <intent
+                android:action="android.intent.action.MAIN"
+                android:targetPackage="com.xiaomi.parts.refreshrate"
+                android:targetClass="com.xiaomi.parts.refreshrate.RefreshRateSettingsActivity" />
+        </Preference>
+
     <PreferenceCategory
         android:key="audio"
         android:title="@string/audio_category">
